@@ -105,7 +105,11 @@ Ensure your response is valid JSON and ONLY return the JSON object.`;
                   const userPrompt = `Code to compile/translate:\n${code}\n\nStdin input buffer:\n${inputBuffer}`;
 
                   const models = [
-                    'nvidia/nemotron-3-nano-30b-a3b:free'
+                    'meta-llama/llama-3-8b-instruct:free',
+                    'qwen/qwen-2-7b-instruct:free',
+                    'google/gemma-2-9b-it:free',
+                    'mistralai/mistral-7b-instruct:free',
+                    'microsoft/phi-3-medium-128k-instruct:free'
                   ];
 
                   let response: any = null;
@@ -257,25 +261,40 @@ Ensure your response is valid JSON and ONLY return the JSON object. No markdown 
 
                     // Fallback to OpenRouter
                     if (!response || !response.ok) {
-                      try {
-                        response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || ''}`,
-                            'HTTP-Referer': 'https://synthex.ai',
-                            'X-Title': 'Synthex AI Studio'
-                          },
-                          body: JSON.stringify({
-                            model: 'nvidia/nemotron-3-nano-30b-a3b:free',
-                            messages: [
-                              { role: 'system', content: systemPrompt },
-                              { role: 'user', content: userPrompt }
-                            ]
-                          })
-                        });
-                      } catch (err: any) {
-                        lastError = err;
+                      const models = [
+                        'meta-llama/llama-3-8b-instruct:free',
+                        'qwen/qwen-2-7b-instruct:free',
+                        'google/gemma-2-9b-it:free',
+                        'mistralai/mistral-7b-instruct:free',
+                        'microsoft/phi-3-medium-128k-instruct:free'
+                      ];
+                      for (const model of models) {
+                        try {
+                          response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || ''}`,
+                              'HTTP-Referer': 'https://synthex.ai',
+                              'X-Title': 'Synthex AI Studio'
+                            },
+                            body: JSON.stringify({
+                              model: model,
+                              messages: [
+                                { role: 'system', content: systemPrompt },
+                                { role: 'user', content: userPrompt }
+                              ]
+                            })
+                          });
+                          if (response.ok) {
+                            break;
+                          } else {
+                            const errText = await response.text();
+                            lastError = new Error(`OpenRouter Model ${model} failed: ${response.status} - ${errText}`);
+                          }
+                        } catch (err: any) {
+                          lastError = err;
+                        }
                       }
                     }
 
