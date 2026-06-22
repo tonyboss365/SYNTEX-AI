@@ -1,0 +1,544 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'Ortica';
+  src: url('./assets/fonts/ortica-main/fonts/OrticaLinear-Regular.woff2') format('woff2'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Regular.woff') format('woff'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ortica';
+  src: url('./assets/fonts/ortica-main/fonts/OrticaLinear-Regular.woff2') format('woff2'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Regular.woff') format('woff'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Regular.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ortica';
+  src: url('./assets/fonts/ortica-main/fonts/OrticaLinear-Light.woff2') format('woff2'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Light.woff') format('woff'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ortica';
+  src: url('./assets/fonts/ortica-main/fonts/OrticaLinear-Bold.woff2') format('woff2'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Bold.woff') format('woff'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Bold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ortica';
+  src: url('./assets/fonts/ortica-main/fonts/OrticaLinear-Bold.woff2') format('woff2'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Bold.woff') format('woff'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ortica';
+  src: url('./assets/fonts/ortica-main/fonts/OrticaLinear-Bold.woff2') format('woff2'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Bold.woff') format('woff'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Bold.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Ortica';
+  src: url('./assets/fonts/ortica-main/fonts/OrticaLinear-Bold.woff2') format('woff2'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Bold.woff') format('woff'),
+       url('./assets/fonts/ortica-main/fonts/OrticaLinear-Bold.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+}
+
+@theme {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-border-light: var(--border-light);
+  --color-text-main: var(--text-main);
+  --color-text-muted: var(--text-muted);
+  --color-curtain: var(--curtain);
+}
+
+:root {
+  --bg: #F8F5EC;
+  /* Lighter Soft Matte Parchment Cream */
+  --card: #FFFFFF;
+  /* Pure White Card */
+  --accent: #3D8D7A;
+  /* Teal Green Accent */
+  --accent-hover: #2F6F60;
+  --border-light: #E7E0CE;
+  /* Lighter Parchment Border */
+  --text-main: #1D3A32;
+  /* Deep Teal Forest Text */
+  --text-muted: #4B6F66;
+  /* Muted Forest Text */
+  --curtain: #080707;
+  /* Dark curtain color for light mode */
+
+  --font-serif: 'Unbounded', sans-serif;
+  --font-sans: 'Ortica', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+.dark {
+  --bg: #07060A;
+  /* Darker obsidian purple-black */
+  --card: #121116;
+  /* Darker slate charcoal-purple */
+  --accent: #9765C2;
+  /* Bright amethyst purple */
+  --accent-hover: #A57FB8;
+  /* Light lavender */
+  --border-light: #3E3C5E;
+  /* Subtler slate purple border */
+  --text-main: #B4B0C7;
+  /* Darker heading text (soft lavender-ivory) */
+  --text-muted: #7669AB;
+  /* Lavender muted text */
+  --curtain: #643C82;
+  /* Deep violet curtain color for dark mode */
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  transition: background-color 0.4s ease, color 0.4s ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Premium Noise texture overlay */
+.bg-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Light-tracking hover border beam */
+.hover-beam {
+  position: relative;
+}
+
+.hover-beam::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: radial-gradient(
+    300px circle at var(--mouse-x, 0px) var(--mouse-y, 0px),
+    rgba(151, 101, 194, 0.4), /* Amethyst purple */
+    rgba(61, 141, 122, 0.4), /* Teal green */
+    transparent 80%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 2;
+}
+
+.hover-beam:hover::before {
+  opacity: 1;
+}
+
+/* Custom premium scrollbar utility classes */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 9999px;
+  border: 1px solid transparent;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Firefox compatibility */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-light) transparent;
+}
+
+.font-normal {
+  font-weight: 600 !important;
+}
+.font-medium {
+  font-weight: 700 !important;
+}
+.font-semibold {
+  font-weight: 800 !important;
+}
+.font-bold {
+  font-weight: 900 !important;
+}
+
+h1,
+h2,
+h3,
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+pre,
+code,
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Custom animations */
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.cursor-blink::after {
+  content: '▋';
+  animation: blink 1s step-start infinite;
+  color: var(--accent);
+  margin-left: 2px;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Spinner custom styles */
+.spinner {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.spinner span {
+  position: absolute;
+  top: 50%;
+  left: var(--left);
+  width: 35px;
+  height: 7px;
+  background: var(--text-main);
+  animation: dominos 1s ease infinite;
+  box-shadow: 2px 2px 3px 0px rgba(0, 0, 0, 0.15);
+}
+
+.spinner span:nth-child(1) {
+  --left: 80px;
+  animation-delay: 0.125s;
+}
+
+.spinner span:nth-child(2) {
+  --left: 70px;
+  animation-delay: 0.3s;
+}
+
+.spinner span:nth-child(3) {
+  left: 60px;
+  animation-delay: 0.425s;
+}
+
+.spinner span:nth-child(4) {
+  animation-delay: 0.54s;
+  left: 50px;
+}
+
+.spinner span:nth-child(5) {
+  animation-delay: 0.665s;
+  left: 40px;
+}
+
+.spinner span:nth-child(6) {
+  animation-delay: 0.79s;
+  left: 30px;
+}
+
+.spinner span:nth-child(7) {
+  animation-delay: 0.915s;
+  left: 20px;
+}
+
+.spinner span:nth-child(8) {
+  left: 10px;
+}
+
+@keyframes dominos {
+  50% {
+    opacity: 0.7;
+  }
+
+  75% {
+    -webkit-transform: rotate(90deg);
+    transform: rotate(90deg);
+  }
+
+  80% {
+    opacity: 1;
+  }
+}
+
+/* Small inline domino spinner loader */
+.spinner-sm {
+  position: relative;
+  width: 42px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.spinner-sm span {
+  position: absolute;
+  top: 3px;
+  left: var(--left);
+  width: 14px;
+  height: 3px;
+  background: var(--accent);
+  animation: dominos-sm 0.9s ease infinite;
+  box-shadow: 1px 1px 1.5px 0px rgba(0, 0, 0, 0.12);
+}
+
+.spinner-sm span:nth-child(1) {
+  --left: 28px;
+  animation-delay: 0.125s;
+}
+
+.spinner-sm span:nth-child(2) {
+  --left: 24px;
+  animation-delay: 0.25s;
+}
+
+.spinner-sm span:nth-child(3) {
+  left: 20px;
+  animation-delay: 0.375s;
+}
+
+.spinner-sm span:nth-child(4) {
+  animation-delay: 0.5s;
+  left: 16px;
+}
+
+.spinner-sm span:nth-child(5) {
+  animation-delay: 0.625s;
+  left: 12px;
+}
+
+.spinner-sm span:nth-child(6) {
+  animation-delay: 0.75s;
+  left: 8px;
+}
+
+.spinner-sm span:nth-child(7) {
+  animation-delay: 0.875s;
+  left: 4px;
+}
+
+.spinner-sm span:nth-child(8) {
+  left: 0px;
+}
+
+@keyframes dominos-sm {
+  50% {
+    opacity: 0.5;
+  }
+
+  75% {
+    -webkit-transform: rotate(90deg);
+    transform: rotate(90deg);
+  }
+
+  80% {
+    opacity: 1;
+  }
+}
+
+/* Premium Glassmorphic Overlay Panel */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(28, 26, 23, 0.08);
+}
+
+.dark .glass-panel {
+  background: rgba(20, 19, 18, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Premium Card Glows */
+.premium-shadow {
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02);
+}
+
+.dark .premium-shadow {
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+}
+
+.border-glow-accent {
+  box-shadow: 0 0 15px rgba(217, 107, 67, 0.08);
+}
+
+.dark .border-glow-accent {
+  box-shadow: 0 0 25px rgba(224, 122, 95, 0.12);
+}
+
+/* Dynamic Interactive Micro-Animations */
+.hover-premium {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.hover-premium:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.04);
+}
+
+.dark .hover-premium:hover {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+/* Premium Editorial Grid Background */
+.editorial-grid {
+  background-image: radial-gradient(var(--border-light) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark .editorial-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+}
+
+/* Custom Text Gradient */
+.text-gradient-accent {
+  background: linear-gradient(135deg, var(--accent) 0%, #EA8F77 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Grid overlay fade mask */
+.grid-mask {
+  mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+}
+
+/* Floating Ambient Gradient Blobs */
+@keyframes float-blob-1 {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+
+  33% {
+    transform: translate(50px, -80px) scale(1.15);
+  }
+
+  66% {
+    transform: translate(-40px, 40px) scale(0.9);
+  }
+
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes float-blob-2 {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+
+  50% {
+    transform: translate(-60px, 70px) scale(1.2);
+  }
+
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes float-blob-3 {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+
+  40% {
+    transform: translate(60px, 40px) scale(0.85);
+  }
+
+  80% {
+    transform: translate(-30px, -50px) scale(1.15);
+  }
+
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob-1 {
+  animation: float-blob-1 18s infinite ease-in-out;
+}
+
+.animate-blob-2 {
+  animation: float-blob-2 22s infinite ease-in-out;
+}
+
+.animate-blob-3 {
+  animation: float-blob-3 20s infinite ease-in-out;
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Synthex AI",
+  "description": "A cinematic, premium AI compiler intelligence platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
