@@ -162,7 +162,7 @@ Ensure your response is valid JSON and ONLY return the JSON object.`;
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${process.env.GITHUB_TOKEN || ''}`
+                          'Authorization': `Bearer ${process.env.GH_MODELS_TOKEN || process.env.GITHUB_TOKEN || ''}`
                         },
                         body: JSON.stringify({
                           model: 'gpt-4o-mini',
@@ -240,7 +240,7 @@ Ensure your response is valid JSON and ONLY return the JSON object. No markdown 
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${process.env.GITHUB_TOKEN || ''}`
+                          'Authorization': `Bearer ${process.env.GH_MODELS_TOKEN || process.env.GITHUB_TOKEN || ''}`
                         },
                         body: JSON.stringify({
                           model: 'gpt-4o-mini',
@@ -357,7 +357,7 @@ STRICT RULES:
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${process.env.GITHUB_TOKEN || ''}`
+                        'Authorization': `Bearer ${process.env.GH_MODELS_TOKEN || process.env.GITHUB_TOKEN || ''}`
                       },
                       body: JSON.stringify({
                         model: 'gpt-4o-mini',

@@ -68,7 +68,7 @@ Create a `.env` file in the project root:
 OPENROUTER_API_KEY=your_openrouter_api_key_here
 
 # Fallback API Endpoint Key
-GITHUB_TOKEN=your_github_personal_access_token_here
+GH_MODELS_TOKEN=your_github_personal_access_token_here
 ```
 
 ### 3. Run Development Server
@@ -92,7 +92,7 @@ Synthex AI is fully optimized for Vercel Serverless deployments.
 2. **Build Settings**: Vercel automatically detects the Vite configuration:
    * Build Command: `npm run build`
    * Output Directory: `dist`
-3. **Environment Variables**: Add `OPENROUTER_API_KEY` and `GITHUB_TOKEN` to your project environment settings.
+3. **Environment Variables**: Add `OPENROUTER_API_KEY` and `GH_MODELS_TOKEN` to your project environment settings. (Do not use `GITHUB_TOKEN` as it is a reserved read-only keyword on Vercel).
 4. **Deploy**: Click deploy. Vercel utilizes `vercel.json` to map all `/api/*` requests to the serverless wrapper in `/api/index.ts` seamlessly.
 
 ---
