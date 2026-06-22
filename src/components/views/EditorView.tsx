@@ -1183,7 +1183,7 @@ export function EditorView({ onBack }: { onBack: () => void }) {
           id: Math.random().toString(),
           time: timeStr,
           file: activeFile,
-          status: hasError ? 'error' : 'success',
+          status: (hasError ? 'error' : 'success') as 'success' | 'error' | 'pending',
           label: hasError ? 'Failed' : 'Success'
         },
         ...prev
@@ -1233,7 +1233,7 @@ export function EditorView({ onBack }: { onBack: () => void }) {
           id: Math.random().toString(),
           time: errTimeStr,
           file: activeFile,
-          status: 'error',
+          status: 'error' as 'success' | 'error' | 'pending',
           label: 'Crash'
         },
         ...prev
@@ -1282,7 +1282,7 @@ export function EditorView({ onBack }: { onBack: () => void }) {
 
     try {
       let targetCode = editorCode;
-      let targetLanguage = langMode;
+      let targetLanguage: string = langMode;
 
       if (aiContextTab === 'workspace') {
         let workspaceContext = '';
