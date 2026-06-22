@@ -51,49 +51,21 @@ graph TD
 
 ---
 
-## 🛠️ Installation & Local Setup
+## 📖 About Syntex AI
 
-### Prerequisites
-* [Node.js](https://nodejs.org) (v18+)
+**Syntex AI** is a state-of-the-art, interactive IDE and compiler simulation suite engineered to bridge the gap between AI-driven assistance and classical compiler construction. Developed for developers, educators, and language enthusiasts, Syntex AI provides a visually stunning, reactive dashboard to write, parse, optimize, and translate code in real-time.
 
-### 1. Install Dependencies
-```bash
-npm install
-```
+### 🌟 Project Vision & Purpose
+Most modern developer tools hide the compiler pipeline behind a black box. Syntex AI demystifies this process by breaking down compilation into its fundamental, logical stages:
+1. **Lexical Analysis**: Breaking code blocks into raw, categorized token streams.
+2. **Abstract Syntax Tree (AST)**: Visualizing syntactic hierarchy with interactive nodes.
+3. **Semantic Analysis**: Verifying variable scopes, declarations, and type correctness.
+4. **Optimization Passes**: Simulating dead-code elimination, constant folding, and loop checks.
+5. **Code Translation**: Compiling source programs into fully optimized Lex/Flex specifications or target scripts.
+6. **Execution Sandbox**: Running the output code inside a simulated runtime to capture output logs.
 
-### 2. Configure Environment variables
-Create a `.env` file in the project root:
-```env
-# Primary API Endpoint Key
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-
-# Fallback API Endpoint Key
-GH_MODELS_TOKEN=your_github_personal_access_token_here
-```
-
-### 3. Run Development Server
-```bash
-# Starts client on port 3000 + backend proxy middleware
-npm run dev
-```
-
-### 4. Build Production Bundle
-```bash
-npm run build
-```
-
----
-
-## 🌐 Production Vercel Deployment
-
-Synthex AI is fully optimized for Vercel Serverless deployments.
-
-1. **Import Repository**: Connect your Github repository to the Vercel Dashboard.
-2. **Build Settings**: Vercel automatically detects the Vite configuration:
-   * Build Command: `npm run build`
-   * Output Directory: `dist`
-3. **Environment Variables**: Add `OPENROUTER_API_KEY` and `GH_MODELS_TOKEN` to your project environment settings. (Do not use `GITHUB_TOKEN` as it is a reserved read-only keyword on Vercel).
-4. **Deploy**: Click deploy. Vercel utilizes `vercel.json` to map all `/api/*` requests to the serverless wrapper in `/api/index.ts` seamlessly.
+### 🧠 Intrinsic AI Diagnostics
+Powered by GitHub Models and OpenRouter, the compilation process is augmented with inline AI diagnostics. When compilation issues arise, Syntex AI highlights the specific error lines, provides human-readable explanations of compiler behavior, and automatically generates code fixes that can be applied to the editor with a single click.
 
 ---
 

@@ -326,11 +326,13 @@ const generateAsciiTree = (node: any): string => {
   }
 };
 
+const autocompleteCache = new Map<string, string>();
+
 const getLocalSuggestion = (codeBefore: string, currentCode: string, currentLang: string): string => {
   const lastWordMatch = codeBefore.match(/\b([a-zA-Z_]\w*)$/);
   if (!lastWordMatch) return '';
   const partial = lastWordMatch[1];
-  if (partial.length < 2) return ''; // only suggest for 2+ characters
+  if (partial.length < 1) return ''; // only suggest for 1+ characters
 
   const lexKeywords = ['int', 'float', 'char', 'void', 'double', 'printf', 'yylex', 'yytext', 'yywrap', 'main', 'return', 'include', 'stdio', 'stdlib', 'string'];
   const pythonKeywords = ['def', 'class', 'if', 'elif', 'else', 'while', 'for', 'in', 'return', 'import', 'as', 'from', 'print', 'int', 'str', 'float', 'bool', 'True', 'False', 'None', 'len', 'range', 'input', 'and', 'or', 'not', 'with', 'try', 'except', 'finally', 'raise', 'pass', 'break', 'continue', 'lambda', 'yield'];
@@ -537,7 +539,16 @@ export function EditorView({ onBack }: { onBack: () => void }) {
   const [aiContextTab, setAiContextTab] = useState<string>('active');
 
   // Compilation/Execution run history state
-  const [runHistory, setRunHistory] = useState<Array<{ id: string; time: string; file: string; status: 'success' | 'error' | 'pending'; label: string }>>([
+  const [runHistory, setRunHistory] = useState<Array<{
+    id: string;
+    time: string;
+    file: string;
+    status: 'success' | 'error' | 'pending';
+    label: string;
+    result?: CompilerResult | null;
+    phasesData?: typeof phasesData;
+    consoleLogs?: string[];
+  }>>([
     { id: 'h-init', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), file: 'readme.md', status: 'success', label: 'Buffer ready' }
   ]);
 
@@ -846,7 +857,7 @@ export function EditorView({ onBack }: { onBack: () => void }) {
       if (cursor > 0) {
         triggerAutocomplete(editorCode, langMode, cursor);
       }
-    }, 600);
+    }, 150);
 
     return () => {
       if (autocompleteTimerRef.current) {
@@ -862,6 +873,15 @@ export function EditorView({ onBack }: { onBack: () => void }) {
     
     const codeBefore = currentCode.substring(0, cursorPosition);
     if (!codeBefore.trim()) return;
+
+    const cacheKey = `${currentLang}:${codeBefore}`;
+    if (autocompleteCache.has(cacheKey)) {
+      const suggestion = autocompleteCache.get(cacheKey) || '';
+      if (suggestion.trim().length > 0) {
+        setGhostText(suggestion);
+      }
+      return;
+    }
 
     lastAutocompleteTriggerRef.current = { code: currentCode, cursor: cursorPosition };
 
@@ -888,6 +908,7 @@ export function EditorView({ onBack }: { onBack: () => void }) {
         ) {
           if (data.suggestion && data.suggestion.trim().length > 0) {
             setGhostText(data.suggestion);
+            autocompleteCache.set(cacheKey, data.suggestion);
           }
         }
       }
@@ -1176,19 +1197,6 @@ export function EditorView({ onBack }: { onBack: () => void }) {
                        outputLower.includes('traceback') || outputLower.includes('failed');
       const statusMsg = hasError ? 'Exit code 1 — Errors detected.' : 'Exit code 0 — Completed successfully.';
 
-      // Add to session execution run history
-      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      setRunHistory(prev => [
-        {
-          id: Math.random().toString(),
-          time: timeStr,
-          file: activeFile,
-          status: (hasError ? 'error' : 'success') as 'success' | 'error' | 'pending',
-          label: hasError ? 'Failed' : 'Success'
-        },
-        ...prev
-      ].slice(0, 5));
-
       const phaseContents = [
         tokensList,
         asciiTree,
@@ -1198,13 +1206,35 @@ export function EditorView({ onBack }: { onBack: () => void }) {
         `${compileOutput}\n\n${statusMsg}`,
       ];
 
+      const finalPhases = PHASE_DEFS.map((p, idx) => ({
+        ...p,
+        content: phaseContents[idx],
+        status: (idx === 5 && hasError) ? ('error' as const) : ('done' as const)
+      }));
+
+      // Add to session execution run history
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setRunHistory(prev => [
+        {
+          id: Math.random().toString(),
+          time: timeStr,
+          file: activeFile,
+          status: (hasError ? 'error' : 'success') as 'success' | 'error' | 'pending',
+          label: hasError ? 'Failed' : 'Success',
+          result: data,
+          phasesData: finalPhases,
+          consoleLogs: [...consoleLogs, '', statusMsg]
+        },
+        ...prev
+      ].slice(0, 5));
+
       for (let i = 0; i < PHASE_DEFS.length; i++) {
         if (!isMountedRef.current) return;
         // Mark as running
         setPhasesData(prev => prev.map(p =>
           p.id === PHASE_DEFS[i].id ? { ...p, status: 'running' } : p
         ));
-        await new Promise(res => setTimeout(res, 600));
+        await new Promise(res => setTimeout(res, 12));
         
         if (!isMountedRef.current) return;
         // Mark as done with content
@@ -1213,7 +1243,7 @@ export function EditorView({ onBack }: { onBack: () => void }) {
             ? { ...p, content: phaseContents[i], status: (i === 5 && hasError) ? 'error' : 'done' }
             : p
         ));
-        await new Promise(res => setTimeout(res, 200));
+        await new Promise(res => setTimeout(res, 4));
       }
 
       if (!isMountedRef.current) return;
@@ -1228,13 +1258,21 @@ export function EditorView({ onBack }: { onBack: () => void }) {
       setConsoleLogs(prev => [...prev, errMsg]);
 
       const errTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const crashPhases = PHASE_DEFS.map((p, idx) => ({
+        ...p,
+        content: idx === 5 ? errMsg : 'Skipped due to pipeline failure.',
+        status: idx === 5 ? ('error' as const) : ('done' as const)
+      }));
       setRunHistory(prev => [
         {
           id: Math.random().toString(),
           time: errTimeStr,
           file: activeFile,
           status: 'error' as 'success' | 'error' | 'pending',
-          label: 'Crash'
+          label: 'Crash',
+          result: null,
+          phasesData: crashPhases,
+          consoleLogs: [...consoleLogs, errMsg]
         },
         ...prev
       ].slice(0, 5));
@@ -1946,7 +1984,25 @@ export function EditorView({ onBack }: { onBack: () => void }) {
               </div>
               <div className="space-y-1.5 max-h-[110px] overflow-y-auto pr-0.5">
                 {runHistory.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center text-[9.5px] font-mono border-b border-bg/30 pb-1 last:border-0">
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      if (files[item.file] !== undefined) {
+                        setActiveFile(item.file);
+                      }
+                      if (item.result !== undefined) {
+                        setResult(item.result);
+                      }
+                      if (item.phasesData !== undefined) {
+                        setPhasesData(item.phasesData);
+                      }
+                      if (item.consoleLogs !== undefined) {
+                        setConsoleLogs(item.consoleLogs);
+                      }
+                    }}
+                    title="Click to restore compile state"
+                    className="flex justify-between items-center text-[9.5px] font-mono border-b border-bg/30 pb-1 last:border-0 cursor-pointer hover:bg-accent/10 hover:text-accent px-1.5 py-0.5 rounded transition-all active:scale-[0.98]"
+                  >
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                         item.status === 'success' ? 'bg-emerald-500' : item.status === 'error' ? 'bg-rose-500' : 'bg-amber-500'

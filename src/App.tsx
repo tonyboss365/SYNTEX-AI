@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import Lenis from 'lenis';
 import { Hero } from './components/sections/Hero';
 import { EditorView } from './components/views/EditorView';
 import { Nav } from './components/sections/Nav';
@@ -11,6 +12,31 @@ import { CTA } from './components/sections/CTA';
 import { Footer } from './components/sections/Footer';
 
 export default function App() {
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      wheelMultiplier: 1.0,
+      touchMultiplier: 2.0,
+    });
+
+    let rafId = 0;
+    function raf(time: number) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+
+    rafId = requestAnimationFrame(raf);
+
+    return () => {
+      lenis.destroy();
+      cancelAnimationFrame(rafId);
+    };
+  }, []);
+
   const [view, setView] = useState<'landing' | 'editor'>('landing');
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
