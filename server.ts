@@ -171,11 +171,12 @@ Return ONLY the JSON object. No markdown fences. No explanation outside the JSON
     // Fallback to OpenRouter if GitHub Models fails
     if (!response || !response.ok) {
       const models = [
-        'meta-llama/llama-3-8b-instruct:free',
-        'qwen/qwen-2-7b-instruct:free',
-        'google/gemma-2-9b-it:free',
-        'mistralai/mistral-7b-instruct:free',
-        'microsoft/phi-3-medium-128k-instruct:free'
+        'openrouter/free',
+        'meta-llama/llama-3.3-70b-instruct:free',
+        'meta-llama/llama-3.2-3b-instruct:free',
+        'qwen/qwen3-coder:free',
+        'nousresearch/hermes-3-llama-3.1-405b:free',
+        'cohere/north-mini-code:free'
       ];
       let skipPaidModels = false;
 
@@ -328,11 +329,12 @@ Ensure your response is valid JSON and ONLY return the JSON object. No markdown 
     // Fallback to OpenRouter
     if (!response || !response.ok) {
       const models = [
-        'meta-llama/llama-3-8b-instruct:free',
-        'qwen/qwen-2-7b-instruct:free',
-        'google/gemma-2-9b-it:free',
-        'mistralai/mistral-7b-instruct:free',
-        'microsoft/phi-3-medium-128k-instruct:free'
+        'openrouter/free',
+        'meta-llama/llama-3.3-70b-instruct:free',
+        'meta-llama/llama-3.2-3b-instruct:free',
+        'qwen/qwen3-coder:free',
+        'nousresearch/hermes-3-llama-3.1-405b:free',
+        'cohere/north-mini-code:free'
       ];
       for (const model of models) {
         try {
