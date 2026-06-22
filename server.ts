@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -11,8 +12,11 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Serving the static client assets
-app.use(express.static(path.join(__dirname, 'dist')));
+// Serving the static client assets if running locally with build folder
+const distPath = path.join(__dirname, 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+}
 
 // API Key from environment variable
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
@@ -72,7 +76,7 @@ function extractJson(str: string): any {
   throw new Error('Could not extract valid JSON from response');
 }
 
-app.post('/api/correct-code', async (req, res) => {
+app.post(['/api/correct-code', '/correct-code'], async (req, res) => {
   try {
     const { code, language, target, stdin } = req.body;
     const targetLanguage = target || 'python';
@@ -275,7 +279,7 @@ Return ONLY the JSON object. No markdown fences. No explanation outside the JSON
   }
 });
 
-app.post('/api/chat', async (req, res) => {
+app.post(['/api/chat', '/chat'], async (req, res) => {
   try {
     const { prompt, code, language } = req.body;
     
@@ -390,7 +394,7 @@ Ensure your response is valid JSON and ONLY return the JSON object. No markdown 
   }
 });
 
-app.post('/api/autocomplete', async (req, res) => {
+app.post(['/api/autocomplete', '/autocomplete'], async (req, res) => {
   try {
     const { code, cursorPosition, language } = req.body;
     const codeBefore = code.substring(0, cursorPosition);
@@ -460,10 +464,12 @@ STRICT RULES:
 
 
 
-// Serve index.html for all other routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
+// Serve index.html for all other routes if running locally with build folder
+if (fs.existsSync(distPath)) {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   app.listen(PORT, () => {
