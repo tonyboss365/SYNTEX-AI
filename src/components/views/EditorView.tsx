@@ -1104,8 +1104,7 @@ export function EditorView({ onBack }: { onBack: () => void }) {
                        outputLower.includes('traceback') ||
                        outputLower.includes('failed') || 
                        outputLower.includes('invalid syntax') || 
-                       outputLower.includes('compile error') ||
-                       (data.explanation && data.explanation.toLowerCase().includes('error'));
+                       outputLower.includes('compile error');
 
       const statusMsg = hasError 
         ? 'Process completed with exit status code 1.'
