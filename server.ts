@@ -177,8 +177,8 @@ Return ONLY the JSON object. No markdown fences. No explanation outside the JSON
       const models = [
         'openai/gpt-4o-mini',
         'openai/gpt-4o-mini:free',
-        'nvidia/llama-3.1-nemotron-70b-instruct',
-        'nvidia/llama-3.1-nemotron-70b-instruct:free',
+        'nvidia/nemotron-3-nano-30b-a3b',
+        'nvidia/nemotron-3-nano-30b-a3b:free',
         'openrouter/free',
         'meta-llama/llama-3.3-70b-instruct:free',
         'meta-llama/llama-3.2-3b-instruct:free',
