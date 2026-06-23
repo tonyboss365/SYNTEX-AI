@@ -104,77 +104,87 @@ Ensure your response is valid JSON and ONLY return the JSON object.`;
 
                   const userPrompt = `Code to compile/translate:\n${code}\n\nStdin input buffer:\n${inputBuffer}`;
 
-                  const models = [
-                    'openrouter/free',
-                    'meta-llama/llama-3.3-70b-instruct:free',
-                    'meta-llama/llama-3.2-3b-instruct:free',
-                    'qwen/qwen3-coder:free',
-                    'nousresearch/hermes-3-llama-3.1-405b:free',
-                    'cohere/north-mini-code:free'
-                  ];
-
                   let response: any = null;
                   let lastError: any = null;
-                  let skipPaidModels = false;
 
-                  for (const model of models) {
-                    const isPaid = !model.endsWith(':free') && model !== 'openrouter/free';
-                    if (isPaid && skipPaidModels) {
-                      continue;
+                  // Try GitHub Models GPT-4o-mini first
+                  try {
+                    response = await fetch('https://models.github.ai/inference/chat/completions', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${process.env.GH_MODELS_TOKEN || process.env.GITHUB_TOKEN || ''}`
+                      },
+                      body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: [
+                          { role: 'system', content: systemPrompt },
+                          { role: 'user', content: userPrompt }
+                        ]
+                      })
+                    });
+                    if (!response.ok) {
+                      const errText = await response.text();
+                      lastError = new Error(`GitHub Models failed: ${response.status} - ${errText}`);
                     }
-
-                    try {
-                      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || ''}`,
-                          'HTTP-Referer': 'https://synthex.ai',
-                          'X-Title': 'Synthex AI Studio'
-                        },
-                        body: JSON.stringify({
-                          model: model,
-                          messages: [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: userPrompt }
-                          ]
-                        })
-                      });
-
-                      if (response.ok) {
-                        break;
-                      } else {
-                        const errText = await response.text();
-                        lastError = new Error(`Model ${model} failed: ${response.status} - ${errText}`);
-                        
-                        if (response.status === 402 || response.status === 403 || errText.toLowerCase().includes('credit') || errText.toLowerCase().includes('balance')) {
-                          skipPaidModels = true;
-                        }
-                      }
-                    } catch (err: any) {
-                      lastError = err;
-                    }
+                  } catch (err: any) {
+                    lastError = err;
                   }
 
+                  // Fallback to OpenRouter if GitHub Models fails
                   if (!response || !response.ok) {
-                    // Fallback to GitHub Models GPT-4o-mini if OpenRouter fails or is rate-limited
-                    try {
-                      response = await fetch('https://models.github.ai/inference/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${process.env.GH_MODELS_TOKEN || process.env.GITHUB_TOKEN || ''}`
-                        },
-                        body: JSON.stringify({
-                          model: 'gpt-4o-mini',
-                          messages: [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: userPrompt }
-                          ]
-                        })
-                      });
-                    } catch (fallbackErr) {
-                      throw lastError || fallbackErr;
+                    const models = [
+                      'openai/gpt-4o-mini',
+                      'openai/gpt-4o-mini:free',
+                      'nvidia/llama-3.1-nemotron-70b-instruct',
+                      'nvidia/llama-3.1-nemotron-70b-instruct:free',
+                      'openrouter/free',
+                      'meta-llama/llama-3.3-70b-instruct:free',
+                      'meta-llama/llama-3.2-3b-instruct:free',
+                      'qwen/qwen3-coder:free',
+                      'nousresearch/hermes-3-llama-3.1-405b:free',
+                      'cohere/north-mini-code:free'
+                    ];
+                    let skipPaidModels = false;
+
+                    for (const model of models) {
+                      const isPaid = !model.endsWith(':free') && model !== 'openrouter/free';
+                      if (isPaid && skipPaidModels) {
+                        continue;
+                      }
+
+                      try {
+                        response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || ''}`,
+                            'HTTP-Referer': 'https://synthex.ai',
+                            'X-Title': 'Synthex AI Studio'
+                          },
+                          body: JSON.stringify({
+                            model: model,
+                            messages: [
+                              { role: 'system', content: systemPrompt },
+                              { role: 'user', content: userPrompt }
+                            ],
+                            temperature: 0.1
+                          })
+                        });
+
+                        if (response.ok) {
+                          break;
+                        } else {
+                          const errText = await response.text();
+                          lastError = new Error(`Model ${model} failed: ${response.status} - ${errText}`);
+                          
+                          if (response.status === 402 || response.status === 403 || errText.toLowerCase().includes('credit') || errText.toLowerCase().includes('balance')) {
+                            skipPaidModels = true;
+                          }
+                        }
+                      } catch (err: any) {
+                        lastError = err;
+                      }
                     }
                   }
 

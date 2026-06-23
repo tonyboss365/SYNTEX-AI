@@ -498,6 +498,31 @@ export function EditorView({ onBack }: { onBack: () => void }) {
     return Object.keys(initialFiles)[0] || 'readme.md';
   };
 
+  const getInitialRunHistory = (): Array<{
+    id: string;
+    time: string;
+    file: string;
+    status: 'success' | 'error' | 'pending';
+    label: string;
+    result?: CompilerResult | null;
+    phasesData?: typeof phasesData;
+    consoleLogs?: string[];
+  }> => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('synthex_run_history');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+    return [
+      { id: 'h-init', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), file: 'readme.md', status: 'success', label: 'Buffer ready' }
+    ];
+  };
+
   const [files, setFiles] = useState<Record<string, string>>(getInitialFiles);
   const [activeFile, setActiveFile] = useState<string>(() => {
     const initialFiles = getInitialFiles();
@@ -539,18 +564,7 @@ export function EditorView({ onBack }: { onBack: () => void }) {
   const [aiContextTab, setAiContextTab] = useState<string>('active');
 
   // Compilation/Execution run history state
-  const [runHistory, setRunHistory] = useState<Array<{
-    id: string;
-    time: string;
-    file: string;
-    status: 'success' | 'error' | 'pending';
-    label: string;
-    result?: CompilerResult | null;
-    phasesData?: typeof phasesData;
-    consoleLogs?: string[];
-  }>>([
-    { id: 'h-init', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), file: 'readme.md', status: 'success', label: 'Buffer ready' }
-  ]);
+  const [runHistory, setRunHistory] = useState(getInitialRunHistory);
 
   // Keep openTabs synced automatically with activeFile changes
   useEffect(() => {
@@ -815,6 +829,10 @@ export function EditorView({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     localStorage.setItem('synthex_active_file', activeFile);
   }, [activeFile]);
+
+  useEffect(() => {
+    localStorage.setItem('synthex_run_history', JSON.stringify(runHistory));
+  }, [runHistory]);
 
   // Sync editor view on active file change
   useEffect(() => {
@@ -1093,26 +1111,58 @@ export function EditorView({ onBack }: { onBack: () => void }) {
         ? 'Process completed with exit status code 1.'
         : 'Process completed with exit status code 0.';
 
-      setConsoleLogs(prev => [
-        ...prev,
+      const finalLogs = [
+        ...initialLogs,
         'SYNTEX Compiler Response received.',
         'Simulating process environment execution...',
         '-------------------------------------------',
         ...compileOutput.split('\n'),
         '-------------------------------------------',
         statusMsg
-      ]);
+      ];
+
+      setConsoleLogs(finalLogs);
+
+      // Add to session execution run history
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setRunHistory(prev => [
+        {
+          id: Math.random().toString(),
+          time: timeStr,
+          file: activeFile,
+          status: (hasError ? 'error' : 'success') as 'success' | 'error' | 'pending',
+          label: hasError ? 'Failed' : 'Success',
+          result: data,
+          consoleLogs: finalLogs
+        },
+        ...prev
+      ].slice(0, 5));
     } catch (e: any) {
       if (!isMountedRef.current) return;
       console.error(e);
       const errMsg = e.name === 'AbortError' 
         ? 'Compiler Error: Request timeout after 25 seconds.'
         : `Compiler Error: ${e.message}`;
-      setConsoleLogs(prev => [
-        ...prev,
+      const finalLogs = [
+        ...initialLogs,
         errMsg,
         'Verify your OpenRouter API Key configuration and internet connection.'
-      ]);
+      ];
+      setConsoleLogs(finalLogs);
+
+      const errTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setRunHistory(prev => [
+        {
+          id: Math.random().toString(),
+          time: errTimeStr,
+          file: activeFile,
+          status: 'error' as 'success' | 'error' | 'pending',
+          label: 'Crash',
+          result: null,
+          consoleLogs: finalLogs
+        },
+        ...prev
+      ].slice(0, 5));
     } finally {
       if (isMountedRef.current) {
         setLoading(false);

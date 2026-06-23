@@ -175,6 +175,10 @@ Return ONLY the JSON object. No markdown fences. No explanation outside the JSON
     // Fallback to OpenRouter if GitHub Models fails
     if (!response || !response.ok) {
       const models = [
+        'openai/gpt-4o-mini',
+        'openai/gpt-4o-mini:free',
+        'nvidia/llama-3.1-nemotron-70b-instruct',
+        'nvidia/llama-3.1-nemotron-70b-instruct:free',
         'openrouter/free',
         'meta-llama/llama-3.3-70b-instruct:free',
         'meta-llama/llama-3.2-3b-instruct:free',
