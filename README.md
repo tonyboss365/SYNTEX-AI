@@ -1,5 +1,6 @@
 # 𝗦𝗬𝗡𝗧𝗘𝗫 𝗔𝗜 — Next-Gen Interactive AI Compiler Studio
-Live Link:https://syntex-ai.vercel.app/
+# Live Link:https://syntex-ai.vercel.app/
+
 Synthex AI is a premium, high-performance compiler workspace and interactive visual environment. It features a full multi-tab directory explorer, static code diagnostics, execution pipelines, and an intelligent context-aware chat assistant built for engineers.
 
 ---
