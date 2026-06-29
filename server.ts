@@ -133,11 +133,12 @@ The "correctedCode" field is purely a suggested fix shown to the user as a diff.
 It does NOT get executed. The "consoleOutput" must reflect what the ORIGINAL code would produce.
 If the code has errors, "consoleOutput" must be the error output, NOT the output of the fixed code.
 
-RULE 3 — STDIN CRASH:
-If code calls input()/Scanner/prompt() but stdin buffer is empty, simulate:
+RULE 3 — STDIN CRASH (ONLY WHEN READ ATTEMPTED):
+If the code actually attempts to read from stdin (e.g. calling input() in Python, Scanner in Java, or prompt() in JS) AND the stdin buffer is empty, simulate:
   Python: EOFError: EOF when reading a line
   Java: java.util.NoSuchElementException
   JS: RuntimeError: Empty stdin buffer
+Otherwise, if the code does NOT call input() or attempt to read stdin, simulate its execution normally without these stdin errors.
 For Lex/Flex specifications, an empty stdin is NOT a crash. yylex() should simply terminate immediately (matching 0 tokens) and complete with exit status code 0.
 Output this crash in "consoleOutput". Do NOT invent mock input values.
 
@@ -194,6 +195,9 @@ Return ONLY the JSON object. No markdown fences. No explanation outside the JSON
     });
     if (!response.ok) {
       const errText = await response.text();
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded (429) for the GitHub Models API. Please wait a moment before trying again.');
+      }
       throw new Error(`GitHub Models GPT-4o-mini failed: ${response.status} - ${errText}`);
     }
 
@@ -292,6 +296,9 @@ Ensure your response is valid JSON and ONLY return the JSON object. No markdown 
     });
     if (!response.ok) {
       const errText = await response.text();
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded (429) for the GitHub Models API. Please wait a moment before trying again.');
+      }
       throw new Error(`GitHub Models failed: ${response.status} - ${errText}`);
     }
 

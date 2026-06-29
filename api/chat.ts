@@ -117,6 +117,9 @@ Ensure your response is valid JSON and ONLY return the JSON object. No markdown 
     });
     if (!response.ok) {
       const errText = await response.text();
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded (429) for the GitHub Models API. Please wait a moment before trying again.');
+      }
       throw new Error(`GitHub Models failed: ${response.status} - ${errText}`);
     }
 

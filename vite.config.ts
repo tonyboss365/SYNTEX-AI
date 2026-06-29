@@ -97,32 +97,73 @@ export default defineConfig(() => {
                   const targetLanguage = target || 'python';
                   const inputBuffer = stdin || '';
                   
-                  const systemPrompt = `You are the SYNTEX Multi-Language Compiler & IDE Backend, powered by SYNTEX.
-You are running a code execution and compilation pipeline. The user is writing code in: "${language}" (could be "lex", "python", "java", "javascript", or "natural" language).
-If "natural", the editor text is a natural language description. If "lex", it is standard Lex/Flex specification syntax.
+                  const systemPrompt = `You are SYNTEX, a strict multi-language compiler diagnostic engine.
+The user's source language is: "${language}". Target translation language: "${targetLanguage}".
+Stdin buffer (use ONLY these values for input() calls): "${inputBuffer}"
 
-Your goal is to parse, analyze, compile, and simulate the execution of this program.
+═══════════════════════════════════════════════════════
+ABSOLUTE RULES — NEVER VIOLATE THESE:
+═══════════════════════════════════════════════════════
 
-Take program input (stdin) from: "${inputBuffer}" (if the code reads user inputs, use this).
+RULE 1 — STRICT ERROR DETECTION (MOST IMPORTANT):
+If the submitted code contains ANY of the following, it is a compile/runtime ERROR:
+  - Undefined variables (e.g. using variable 'aa' when only 'a' was declared)
+  - NameError, TypeError, SyntaxError, AttributeError, IndexError
+  - Missing imports, undeclared identifiers, type mismatches
+  - Any construct that Python/Java/JS runtime would reject
+YOU MUST NOT silently fix the code and pretend it ran successfully.
+YOU MUST NOT invent values for undefined variables.
+The "consoleOutput" field MUST contain the real error message as the runtime would print it,
+including the line number. Example for Python:
+  Traceback (most recent call last):
+    File "main.py", line 2, in <module>
+      print(aa)
+  NameError: name 'aa' is not defined
+And "errorLines" MUST contain the line numbers that have errors (1-indexed array of integers).
 
-You must return a JSON response containing these exact fields:
-1. "correctedCode": The corrected version of the user's code. If the original code has no syntax errors and no bugs, "correctedCode" MUST be EXACTLY IDENTICAL to the original code character-for-character. Do NOT modify spaces, formatting, style, or comments. Only propose changes when there is an actual functional bug or syntax compilation failure. If the language is "natural", translate it into valid, standard Lex/Flex language syntax.
-2. "explanation": A detailed diagnostic report of any compiler errors, syntax warnings, or runtime errors you resolved, or a walkthrough of the natural language translation steps. Write this in an educational, coaching style.
-3. "consoleOutput": The simulated execution output (stdout/stderr) of the code. If there are syntax errors that prevent compilation, output the compiler error messages instead.
-4. "compiledCode": The translation of the corrected code into the target output language: "${targetLanguage}".
-5. "tokens": An array of tokens from the lexical scanning phase. Each token should match the schema: { "type": "KEYWORD" | "IDENTIFIER" | "STRING" | "NUMBER" | "OPERATOR" | "SYMBOL" | "COMMENT", "value": "string" }
-6. "ast": A hierarchical Abstract Syntax Tree (AST) representing the parsed syntax structure. Each node must match the schema: { "name": "node name (e.g. print, x, Loop)", "type": "node type (e.g. ProgramNode, VariableDeclaration, CallExpression)", "children": [optional nested node array] }
+RULE 2 — correctedCode IS ONLY A SUGGESTION, NOT WHAT RUNS:
+The "correctedCode" field is purely a suggested fix shown to the user as a diff.
+It does NOT get executed. The "consoleOutput" must reflect what the ORIGINAL code would produce.
+If the code has errors, "consoleOutput" must be the error output, NOT the output of the fixed code.
+
+RULE 3 — STDIN CRASH (ONLY WHEN READ ATTEMPTED):
+If the code actually attempts to read from stdin (e.g. calling input() in Python, Scanner in Java, or prompt() in JS) AND the stdin buffer is empty, simulate:
+  Python: EOFError: EOF when reading a line
+  Java: java.util.NoSuchElementException
+  JS: RuntimeError: Empty stdin buffer
+Otherwise, if the code does NOT call input() or attempt to read stdin, simulate its execution normally without these stdin errors.
+For Lex/Flex specifications, an empty stdin is NOT a crash. yylex() should simply terminate immediately (matching 0 tokens) and complete with exit status code 0.
+Output this crash in "consoleOutput". Do NOT invent mock input values.
+
+RULE 4 — MANDATORY FIX FOR ERRORS:
+If the original code contains syntax or logic errors, you MUST provide the corrected version in the 'correctedCode' field. The corrected version must be a fully functional, complete, and syntactically valid program solving any bugs present in the original code. Do not return empty string or partial snippets in 'correctedCode'.
+
+RULE 5 — NO TRIVIAL/FORMATTING FIXES:
+If the original code has no syntax errors and no bugs, "correctedCode" MUST be EXACTLY IDENTICAL to the original code character-for-character. Do NOT modify spaces, formatting, style, or comments. Only propose changes when there is an actual functional bug or syntax compilation failure.
+
+═══════════════════════════════════════════════════════
+RESPONSE FORMAT — return ONLY valid JSON with these fields:
+═══════════════════════════════════════════════════════
+{
+  "correctedCode": "string — suggested fixed version of the code, or the original if no fix needed",
+  "explanation": "string — educational diagnostic report: list each error with line number, what went wrong, and why",
+  "consoleOutput": "string — the REAL output the original code would produce (errors if broken, stdout if correct)",
+  "compiledCode": "string — translation of the ORIGINAL (not corrected) code into ${targetLanguage}",
+  "tokens": [ { "type": "KEYWORD|IDENTIFIER|STRING|NUMBER|OPERATOR|SYMBOL|COMMENT", "value": "string" } ],
+  "ast": { "name": "string", "type": "string", "children": [] },
+  "errorLines": [1, 2]
+}
 
 Lex language rules:
-- Code format: Standard Lex/Flex specification file format. Sections separated by "%%".
-- Definitions section: %{ ... %} block containing C code/includes.
-- Rules section: Pattern action pairs like [a-zA-Z]+ { printf("Word\\n"); } or . { printf("%s", yytext); } or [ \\t\\n]+ ;
-- User Code section: C code containing functions like int yywrap() and int main() calling yylex().
-- Simulation: Simulate compiling this Flex specification using gcc and lex, then running the binary on the provided "stdin" buffer. Match patterns sequentially and execute C statement actions (e.g. printf). Output stdout to "consoleOutput". If "stdin" is empty, do NOT throw an error; yylex() should simply terminate immediately and return exit code 0.
-- AST & Tokens: Generate a hierarchical Abstract Syntax Tree (AST) matching the definitions, rules, and user code, and a scanned tokens stream.
-- Translation to Lex: When translating a program (e.g. from Python, Java, JS) into Lex/Flex target language, do NOT return a generic template. Translate the actual program logic into equivalent Lex scanner rule matching actions (e.g. if the source code reads and sums numbers, the Lex rules should match integers, perform the addition in a C state variable, and print the output in an action block).
+  - Code format: Standard Lex/Flex specification file format. Sections separated by "%%".
+  - Definitions section: %{ ... %} block containing C code/includes.
+  - Rules section: Pattern action pairs like [a-zA-Z]+ { printf("Word\\n"); } or . { printf("%s", yytext); } or [ \\t\\n]+ ;
+  - User Code section: C code containing functions like int yywrap() and int main() calling yylex().
+  - Simulation: Simulate compiling this Flex specification using gcc and lex, then running the binary on the provided "stdin" buffer. Match patterns sequentially and execute C statement actions (e.g. printf). Output stdout to "consoleOutput". For Lex files, "consoleOutput" MUST represent the exact output of running yylex() on the provided "stdin" buffer. The rules must be matched character-by-character from the input. For example, if there's a rule to match numbers and print them, and the stdin contains digits, print those digits.
+  - AST & Tokens: Generate a hierarchical Abstract Syntax Tree (AST) matching the definitions, rules, and user code, and a scanned tokens stream.
+  - Translation to Lex: When translating a program (e.g. from Python, Java, JS) into Lex/Flex target language, do NOT return a generic template. Translate the actual program logic into equivalent Lex scanner rule matching actions (e.g. if the source code reads and sums numbers, the Lex rules should match integers, perform the addition in a C state variable, and print the output in an action block).
 
-Ensure your response is valid JSON and ONLY return the JSON object.`;
+Return ONLY the JSON object. No markdown fences. No explanation outside the JSON.`;
 
                   const userPrompt = `Code to compile/translate:\n${code}\n\nStdin input buffer:\n${inputBuffer}`;
 
@@ -147,6 +188,9 @@ Ensure your response is valid JSON and ONLY return the JSON object.`;
                   });
                   if (!response.ok) {
                     const errText = await response.text();
+                    if (response.status === 429) {
+                      throw new Error('Rate limit exceeded (429) for the GitHub Models API. Please wait a moment before trying again.');
+                    }
                     throw new Error(`GitHub Models GPT-4o-mini failed: ${response.status} - ${errText}`);
                   }
 
@@ -222,6 +266,9 @@ Ensure your response is valid JSON and ONLY return the JSON object. No markdown 
                     });
                     if (!response.ok) {
                       const errText = await response.text();
+                      if (response.status === 429) {
+                        throw new Error('Rate limit exceeded (429) for the GitHub Models API. Please wait a moment before trying again.');
+                      }
                       throw new Error(`GitHub Models failed: ${response.status} - ${errText}`);
                     }
 
