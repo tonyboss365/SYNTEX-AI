@@ -3,9 +3,31 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+function getGitToken(): string {
+  const envToken = process.env.GH_MODELS_TOKEN || process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_PAT || '';
+  if (envToken) return envToken;
+
+  try {
+    const input = 'protocol=https\nhost=github.com\n\n';
+    const output = execSync('git credential fill', {
+      input: input,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore']
+    });
+    const match = output.match(/^password=(.+)$/m);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  } catch (e) {
+    // Ignore error
+  }
+  return '';
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -119,6 +141,12 @@ If code calls input()/Scanner/prompt() but stdin buffer is empty, simulate:
 For Lex/Flex specifications, an empty stdin is NOT a crash. yylex() should simply terminate immediately (matching 0 tokens) and complete with exit status code 0.
 Output this crash in "consoleOutput". Do NOT invent mock input values.
 
+RULE 4 — MANDATORY FIX FOR ERRORS:
+If the original code contains syntax or logic errors, you MUST provide the corrected version in the 'correctedCode' field. The corrected version must be a fully functional, complete, and syntactically valid program solving any bugs present in the original code. Do not return empty string or partial snippets in 'correctedCode'.
+
+RULE 5 — NO TRIVIAL/FORMATTING FIXES:
+If the original code has no syntax errors and no bugs, "correctedCode" MUST be EXACTLY IDENTICAL to the original code character-for-character. Do NOT modify spaces, formatting, style, or comments. Only propose changes when there is an actual functional bug or syntax compilation failure.
+
 ═══════════════════════════════════════════════════════
 RESPONSE FORMAT — return ONLY valid JSON with these fields:
 ═══════════════════════════════════════════════════════
@@ -137,7 +165,7 @@ Lex language rules:
   - Definitions section: %{ ... %} block containing C code/includes.
   - Rules section: Pattern action pairs like [a-zA-Z]+ { printf("Word\\n"); } or . { printf("%s", yytext); } or [ \\t\\n]+ ;
   - User Code section: C code containing functions like int yywrap() and int main() calling yylex().
-  - Simulation: Simulate compiling this Flex specification using gcc and lex, then running the binary on the provided "stdin" buffer. Match patterns sequentially and execute C statement actions (e.g. printf). Output stdout to "consoleOutput".
+  - Simulation: Simulate compiling this Flex specification using gcc and lex, then running the binary on the provided "stdin" buffer. Match patterns sequentially and execute C statement actions (e.g. printf). Output stdout to "consoleOutput". For Lex files, "consoleOutput" MUST represent the exact output of running yylex() on the provided "stdin" buffer. The rules must be matched character-by-character from the input. For example, if there's a rule to match numbers and print them, and the stdin contains digits, print those digits.
   - AST & Tokens: Generate a hierarchical Abstract Syntax Tree (AST) matching the definitions, rules, and user code, and a scanned tokens stream.
   - Translation to Lex: When translating a program (e.g. from Python, Java, JS) into Lex/Flex target language, do NOT return a generic template. Translate the actual program logic into equivalent Lex scanner rule matching actions (e.g. if the source code reads and sums numbers, the Lex rules should match integers, perform the addition in a C state variable, and print the output in an action block).
 
@@ -145,92 +173,28 @@ Return ONLY the JSON object. No markdown fences. No explanation outside the JSON
 
     const userPrompt = `Code to compile/translate:\n${code}\n\nStdin input buffer:\n${inputBuffer}`;
 
-    let response: any = null;
-    let lastError: any = null;
-
-    // Try GitHub Models GPT-4o-mini first
-    try {
-      response = await fetch('https://models.github.ai/inference/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.GH_MODELS_TOKEN || process.env.GITHUB_TOKEN || ''}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ]
-        })
-      });
-      if (!response.ok) {
-        const errText = await response.text();
-        lastError = new Error(`GitHub Models GPT-4o-mini failed: ${response.status} - ${errText}`);
-      }
-    } catch (err: any) {
-      lastError = err;
+    const ghToken = getGitToken();
+    if (!ghToken) {
+      throw new Error('GH_MODELS_TOKEN or GITHUB_TOKEN environment variable is not configured');
     }
 
-    // Fallback to OpenRouter if GitHub Models fails
-    if (!response || !response.ok) {
-      const models = [
-        'openai/gpt-4o-mini',
-        'openai/gpt-4o-mini:free',
-        'nvidia/nemotron-3-nano-30b-a3b',
-        'nvidia/nemotron-3-nano-30b-a3b:free',
-        'openrouter/free',
-        'meta-llama/llama-3.3-70b-instruct:free',
-        'meta-llama/llama-3.2-3b-instruct:free',
-        'qwen/qwen3-coder:free',
-        'nousresearch/hermes-3-llama-3.1-405b:free',
-        'cohere/north-mini-code:free'
-      ];
-      let skipPaidModels = false;
-
-      for (const model of models) {
-        const isPaid = !model.endsWith(':free') && model !== 'openrouter/free';
-        if (isPaid && skipPaidModels) {
-          continue;
-        }
-
-        try {
-          response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-              'HTTP-Referer': 'https://synthex.ai',
-              'X-Title': 'Synthex AI Studio'
-            },
-            body: JSON.stringify({
-              model: model,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt }
-              ],
-              temperature: 0.1
-            })
-          });
-
-          if (response.ok) {
-            break;
-          } else {
-            const errText = await response.text();
-            lastError = new Error(`OpenRouter Model ${model} failed: ${response.status} - ${errText}`);
-
-            if (response.status === 402 || response.status === 403 || errText.toLowerCase().includes('credit') || errText.toLowerCase().includes('balance')) {
-              skipPaidModels = true;
-            }
-          }
-        } catch (err: any) {
-          lastError = err;
-        }
-      }
-    }
-
-    if (!response || !response.ok) {
-      throw lastError || new Error('All model endpoints failed');
+    const response = await fetch('https://models.github.ai/inference/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ghToken}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ]
+      })
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`GitHub Models GPT-4o-mini failed: ${response.status} - ${errText}`);
     }
 
     const data = await response.json();
@@ -306,76 +270,29 @@ Ensure your response is valid JSON and ONLY return the JSON object. No markdown 
 
     const userPrompt = `User question: ${prompt}`;
 
-    let response: any = null;
-    let lastError: any = null;
-
-    // Try GitHub Models first
-    try {
-      response = await fetch('https://models.github.ai/inference/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.GH_MODELS_TOKEN || process.env.GITHUB_TOKEN || ''}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          response_format: { type: 'json_object' }
-        })
-      });
-      if (!response.ok) {
-        const errText = await response.text();
-        lastError = new Error(`GitHub Models failed: ${response.status} - ${errText}`);
-      }
-    } catch (err: any) {
-      lastError = err;
+    const ghToken = getGitToken();
+    if (!ghToken) {
+      throw new Error('GH_MODELS_TOKEN or GITHUB_TOKEN environment variable is not configured');
     }
 
-    // Fallback to OpenRouter
-    if (!response || !response.ok) {
-      const models = [
-        'openrouter/free',
-        'meta-llama/llama-3.3-70b-instruct:free',
-        'meta-llama/llama-3.2-3b-instruct:free',
-        'qwen/qwen3-coder:free',
-        'nousresearch/hermes-3-llama-3.1-405b:free',
-        'cohere/north-mini-code:free'
-      ];
-      for (const model of models) {
-        try {
-          response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-              'HTTP-Referer': 'https://synthex.ai',
-              'X-Title': 'Synthex AI Studio'
-            },
-            body: JSON.stringify({
-              model: model,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt }
-              ]
-            })
-          });
-          if (response.ok) {
-            break;
-          } else {
-            const errText = await response.text();
-            lastError = new Error(`OpenRouter Model ${model} failed: ${response.status} - ${errText}`);
-          }
-        } catch (err: any) {
-          lastError = err;
-        }
-      }
-    }
-
-    if (!response || !response.ok) {
-      throw lastError || new Error('All chat endpoints failed');
+    const response = await fetch('https://models.github.ai/inference/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ghToken}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        response_format: { type: 'json_object' }
+      })
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`GitHub Models failed: ${response.status} - ${errText}`);
     }
 
     const data = await response.json();
@@ -418,37 +335,41 @@ STRICT RULES:
 
     const userPrompt = `Code before cursor:\n${codeBefore}\n\nCode after cursor:\n${codeAfter}`;
 
+    const ghToken = getGitToken();
     let response: any = null;
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      response = await fetch('https://models.github.ai/inference/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.GH_MODELS_TOKEN || process.env.GITHUB_TOKEN || ''}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          temperature: 0.1,
-          max_tokens: 30
-        }),
-        signal: controller.signal
-      });
+    if (ghToken) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      clearTimeout(timeoutId);
-    } catch (err: any) {
-      console.error('Fetch to GitHub Models failed:', err);
+        response = await fetch('https://models.github.ai/inference/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${ghToken}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.1,
+            max_tokens: 30
+          }),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+      } catch (err: any) {
+        console.error('Fetch to GitHub Models failed:', err);
+      }
     }
 
     if (!response || !response.ok) {
       const errText = response ? await response.text() : 'No response';
-      console.error(`GitHub Models API error: ${response ? response.status : 'unknown'} - ${errText}`);
+      console.error(`Autocomplete API error: ${response ? response.status : 'unknown'} - ${errText}`);
       res.json({ suggestion: '' });
       return;
     }

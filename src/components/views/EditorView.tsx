@@ -839,6 +839,8 @@ export function EditorView({ onBack }: { onBack: () => void }) {
     setEditorCode(files[activeFile] || '');
     setResult(null);
     setErrorLines([]);
+    setGhostText('');
+    setShowFixProposal(false);
   }, [activeFile]);
 
   // Autocomplete ghost text
@@ -982,6 +984,9 @@ export function EditorView({ onBack }: { onBack: () => void }) {
         'AI fix applied in editor.',
         'Running static code-check...'
       ]);
+      
+      setShowFixProposal(false);
+      setResult(prev => prev ? { ...prev, correctedCode: fixCode } : null);
     }
   };
 
@@ -1092,7 +1097,7 @@ export function EditorView({ onBack }: { onBack: () => void }) {
       const newErrorLines: number[] = Array.isArray(data.errorLines) ? data.errorLines : [];
       setErrorLines(newErrorLines);
       
-      if (newErrorLines.length > 0 && data.correctedCode && data.correctedCode !== editorCode) {
+      if (data.correctedCode && data.correctedCode !== editorCode) {
         setShowFixProposal(true);
       }
 
@@ -1145,7 +1150,7 @@ export function EditorView({ onBack }: { onBack: () => void }) {
       const finalLogs = [
         ...initialLogs,
         errMsg,
-        'Verify your OpenRouter API Key configuration and internet connection.'
+        'Verify your GH_MODELS_TOKEN or GITHUB_TOKEN environment variable and internet connection.'
       ];
       setConsoleLogs(finalLogs);
 
@@ -1228,7 +1233,7 @@ export function EditorView({ onBack }: { onBack: () => void }) {
       const newErrorLines: number[] = Array.isArray(data.errorLines) ? data.errorLines : [];
       setErrorLines(newErrorLines);
       
-      if (newErrorLines.length > 0 && data.correctedCode && data.correctedCode !== editorCode) {
+      if (data.correctedCode && data.correctedCode !== editorCode) {
         setShowFixProposal(true);
       }
 
@@ -1347,9 +1352,11 @@ export function EditorView({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const handleConfirmInput = (inputVal: string) => {
+  const handleConfirmInput = (inputVal: string, saveInput: boolean = true) => {
     setShowInputDialog(false);
-    setStdin(inputVal);
+    if (saveInput) {
+      setStdin(inputVal);
+    }
     if (executionMode === 'compiler') {
       executeCompiler(inputVal);
     } else {
@@ -1415,7 +1422,7 @@ export function EditorView({ onBack }: { onBack: () => void }) {
         ...prev,
         {
           sender: 'assistant' as const,
-          text: 'Error contacting SYNTEX assistant backend. Please verify your OpenRouter API Key configuration and local server connection.'
+          text: 'Error contacting SYNTEX assistant backend. Please verify your GH_MODELS_TOKEN or GITHUB_TOKEN environment variable and local server connection.'
         }
       ]);
     } finally {
@@ -1657,6 +1664,10 @@ export function EditorView({ onBack }: { onBack: () => void }) {
   };
 
   const handleDeleteFolder = (folderPath: string) => {
+    setOpenTabs(prev => prev.filter(t => !t.startsWith(folderPath + '/')));
+    if (aiContextTab.startsWith(folderPath + '/')) {
+      setAiContextTab('active');
+    }
     setFiles(prev => {
       const copy = { ...prev };
       Object.keys(copy).forEach(filePath => {
@@ -1693,6 +1704,11 @@ export function EditorView({ onBack }: { onBack: () => void }) {
   const confirmDeleteFile = () => {
     if (!deleteConfirmFile) return;
     const filenameToDelete = deleteConfirmFile;
+    
+    setOpenTabs(prev => prev.filter(t => t !== filenameToDelete));
+    if (aiContextTab === filenameToDelete) {
+      setAiContextTab('active');
+    }
     
     setFiles(prev => {
       const copy = { ...prev };
@@ -1735,6 +1751,11 @@ export function EditorView({ onBack }: { onBack: () => void }) {
     if (files[newPath] !== undefined) {
       setCustomAlert('A file with that name already exists.');
       return;
+    }
+    
+    setOpenTabs(prev => prev.map(t => t === oldName ? newPath : t));
+    if (aiContextTab === oldName) {
+      setAiContextTab(newPath);
     }
     
     setFiles(prev => {
@@ -2032,36 +2053,47 @@ export function EditorView({ onBack }: { onBack: () => void }) {
                 <span className="text-[8px] font-mono text-accent">Active Session</span>
               </div>
               <div className="space-y-1.5 max-h-[110px] overflow-y-auto pr-0.5">
-                {runHistory.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => {
-                      if (files[item.file] !== undefined) {
-                        setActiveFile(item.file);
-                      }
-                      if (item.result !== undefined) {
-                        setResult(item.result);
-                      }
-                      if (item.phasesData !== undefined) {
-                        setPhasesData(item.phasesData);
-                      }
-                      if (item.consoleLogs !== undefined) {
-                        setConsoleLogs(item.consoleLogs);
-                      }
-                    }}
-                    title="Click to restore compile state"
-                    className="flex justify-between items-center text-[9.5px] font-mono border-b border-bg/30 pb-1 last:border-0 cursor-pointer hover:bg-accent/10 hover:text-accent px-1.5 py-0.5 rounded transition-all active:scale-[0.98]"
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                        item.status === 'success' ? 'bg-emerald-500' : item.status === 'error' ? 'bg-rose-500' : 'bg-amber-500'
-                      }`} />
-                      <span className="text-text-main truncate max-w-[85px]">{item.file.split('/').pop()}</span>
-                      <span className="text-text-muted/65 text-[8.5px]">({item.label})</span>
+                {runHistory.map((item) => {
+                  const fileExists = files[item.file] !== undefined;
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => {
+                        if (fileExists) {
+                          setActiveFile(item.file);
+                        } else {
+                          setCustomAlert(`Cannot open "${item.file.split('/').pop()}": file has been deleted.`);
+                        }
+                        if (item.result !== undefined) {
+                          setResult(item.result);
+                        }
+                        if (item.phasesData !== undefined) {
+                          setPhasesData(item.phasesData);
+                        }
+                        if (item.consoleLogs !== undefined) {
+                          setConsoleLogs(item.consoleLogs);
+                        }
+                      }}
+                      title={fileExists ? "Click to restore compile state" : "File deleted (cannot restore editor file)"}
+                      className={`flex justify-between items-center text-[9.5px] font-mono border-b border-bg/30 pb-1 last:border-0 cursor-pointer px-1.5 py-0.5 rounded transition-all active:scale-[0.98] ${
+                        fileExists 
+                          ? "hover:bg-accent/10 hover:text-accent" 
+                          : "opacity-40 cursor-not-allowed hover:bg-rose-500/5"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                          item.status === 'success' ? 'bg-emerald-500' : item.status === 'error' ? 'bg-rose-500' : 'bg-amber-500'
+                        }`} />
+                        <span className={`truncate max-w-[85px] ${fileExists ? 'text-text-main' : 'text-text-muted line-through font-light'}`}>
+                          {item.file.split('/').pop()}
+                        </span>
+                        <span className="text-text-muted/65 text-[8.5px]">({item.label})</span>
+                      </div>
+                      <span className="text-text-muted/50 text-[8px] shrink-0">{item.time}</span>
                     </div>
-                    <span className="text-text-muted/50 text-[8px] shrink-0">{item.time}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -2465,7 +2497,11 @@ export function EditorView({ onBack }: { onBack: () => void }) {
                       <textarea
                         value={stdin}
                         onChange={(e) => setStdin(e.target.value)}
-                        placeholder="e.g. 42 \n hello \n true"
+                        placeholder={
+                          langMode === 'lex' 
+                            ? "Enter character stream / tokens to scan (e.g. hello world 123 AEIOU)" 
+                            : "e.g. 42 \n hello \n true"
+                        }
                         className="flex-1 w-full p-4 bg-bg border border-border-light text-text-main rounded-xl focus:outline-none resize-none text-xs md:text-sm leading-6"
                       />
                     </motion.div>
@@ -2667,11 +2703,13 @@ export function EditorView({ onBack }: { onBack: () => void }) {
                           >
                             <option value="active">Active File ({activeFile.split('/').pop()})</option>
                             <option value="workspace">Entire Workspace</option>
-                            {openTabs.map(tab => (
-                              <option key={tab} value={tab}>
-                                File: {tab.split('/').pop()}
-                              </option>
-                            ))}
+                            {openTabs
+                              .filter(tab => tab !== activeFile && files[tab] !== undefined)
+                              .map(tab => (
+                                <option key={tab} value={tab}>
+                                  File: {tab.split('/').pop()}
+                                </option>
+                              ))}
                           </select>
                         </div>
 
@@ -2804,7 +2842,7 @@ export function EditorView({ onBack }: { onBack: () => void }) {
                   Cancel
                 </button>
                 <button
-                  onClick={() => handleConfirmInput('')}
+                  onClick={() => handleConfirmInput('', false)}
                   className="px-4 py-2 rounded-xl border border-border-light hover:bg-bg transition-colors cursor-pointer text-text-main"
                 >
                   Run Without Input

@@ -1,3 +1,26 @@
+import { execSync } from 'child_process';
+
+function getGitToken(): string {
+  const envToken = process.env.GH_MODELS_TOKEN || process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_PAT || '';
+  if (envToken) return envToken;
+
+  try {
+    const input = 'protocol=https\nhost=github.com\n\n';
+    const output = execSync('git credential fill', {
+      input: input,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore']
+    });
+    const match = output.match(/^password=(.+)$/m);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  } catch (e) {
+    // Ignore error
+  }
+  return '';
+}
+
 function extractJson(str) {
   const match = str.match(/\{[\s\S]*\}/);
   if (match) {
@@ -72,76 +95,29 @@ Ensure your response is valid JSON and ONLY return the JSON object. No markdown 
 
     const userPrompt = `User question: ${prompt}`;
 
-    let response = null;
-    let lastError = null;
-
-    // Try GitHub Models first
-    try {
-      response = await fetch('https://models.github.ai/inference/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.GH_MODELS_TOKEN || process.env.GITHUB_TOKEN || ''}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          response_format: { type: 'json_object' }
-        })
-      });
-      if (!response.ok) {
-        const errText = await response.text();
-        lastError = new Error(`GitHub Models failed: ${response.status} - ${errText}`);
-      }
-    } catch (err) {
-      lastError = err;
+    const ghToken = getGitToken();
+    if (!ghToken) {
+      throw new Error('GH_MODELS_TOKEN or GITHUB_TOKEN environment variable is not configured');
     }
 
-    // Fallback to OpenRouter
-    if (!response || !response.ok) {
-      const models = [
-        'openrouter/free',
-        'meta-llama/llama-3.3-70b-instruct:free',
-        'meta-llama/llama-3.2-3b-instruct:free',
-        'qwen/qwen3-coder:free',
-        'nousresearch/hermes-3-llama-3.1-405b:free',
-        'cohere/north-mini-code:free'
-      ];
-      for (const model of models) {
-        try {
-          response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || ''}`,
-              'HTTP-Referer': 'https://synthex.ai',
-              'X-Title': 'Synthex AI Studio'
-            },
-            body: JSON.stringify({
-              model: model,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt }
-              ]
-            })
-          });
-          if (response.ok) {
-            break;
-          } else {
-            const errText = await response.text();
-            lastError = new Error(`OpenRouter Model ${model} failed: ${response.status} - ${errText}`);
-          }
-        } catch (err) {
-          lastError = err;
-        }
-      }
-    }
-
-    if (!response || !response.ok) {
-      throw lastError || new Error('All chat endpoints failed');
+    const response = await fetch('https://models.github.ai/inference/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ghToken}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        response_format: { type: 'json_object' }
+      })
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`GitHub Models failed: ${response.status} - ${errText}`);
     }
 
     const data = await response.json();

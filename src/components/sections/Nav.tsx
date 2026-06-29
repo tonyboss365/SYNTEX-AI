@@ -26,16 +26,17 @@ export function Nav({ theme, toggleTheme, onLaunch, onBack, view }: NavProps) {
           className={`flex items-center gap-2 text-text-main select-none ${isEditor ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
         >
           {/* Futuristic Custom Geometric Prism Compiler Icon */}
-          <svg className="w-5.5 h-5.5 text-accent shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M12 22L2 17l10-5 10 5-10 5z" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M2 7v10" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M22 7v10" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M12 2v20" strokeDasharray="3 3" className="opacity-50" />
+          <svg className="w-6 h-6 text-accent shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L21 7V17L12 22L3 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-30" />
+            <path d="M12 6L18 9.5V14.5L12 18L6 14.5V9.5L12 6Z" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <line x1="12" y1="6" x2="12" y2="18" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" />
+            <line x1="6" y1="14.5" x2="18" y2="9.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" />
+            <line x1="6" y1="9.5" x2="18" y2="14.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" />
+            <circle cx="12" cy="12" r="2" fill="currentColor" />
           </svg>
           
-          <span className="font-sans font-normal tracking-wider text-[20px] text-text-main">
-            𝗦𝝭𝝥𝝩𝝨𝝬
+          <span className="font-sans font-extrabold tracking-wider text-xl text-text-main flex items-center">
+            SYN<span className="text-accent font-light">TEX</span>
           </span>
           {isEditor && (
             <span className="text-[10px] font-mono uppercase bg-accent/10 border border-accent/20 px-1.5 py-0.5 rounded text-accent font-bold tracking-wider ml-1">

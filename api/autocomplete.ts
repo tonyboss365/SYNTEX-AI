@@ -1,3 +1,26 @@
+import { execSync } from 'child_process';
+
+function getGitToken(): string {
+  const envToken = process.env.GH_MODELS_TOKEN || process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_PAT || '';
+  if (envToken) return envToken;
+
+  try {
+    const input = 'protocol=https\nhost=github.com\n\n';
+    const output = execSync('git credential fill', {
+      input: input,
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore']
+    });
+    const match = output.match(/^password=(.+)$/m);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  } catch (e) {
+    // Ignore error
+  }
+  return '';
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -31,7 +54,7 @@ STRICT RULES:
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.GH_MODELS_TOKEN || process.env.GITHUB_TOKEN || ''}`
+          'Authorization': `Bearer ${getGitToken()}`
         },
         body: JSON.stringify({
           model: 'gpt-4o-mini',
